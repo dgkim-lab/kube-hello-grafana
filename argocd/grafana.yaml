@@ -1,0 +1,49 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grafana
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    chart: grafana
+    targetRevision: 12.1.1
+    helm:
+      releaseName: grafana
+      valuesObject:
+        adminUser: admin
+        adminPassword: admin
+        persistence:
+          enabled: false
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            memory: 256Mi
+        service:
+          type: ClusterIP
+          port: 80
+          targetPort: 3000
+        ingress:
+          enabled: true
+          ingressClassName: traefik
+          annotations:
+            cert-manager.io/cluster-issuer: letsencrypt-route53-prod
+          hosts:
+            - grafana.k3s.dgkim.net
+          tls:
+            - secretName: grafana-tls
+              hosts:
+                - grafana.k3s.dgkim.net
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: grafana
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
